@@ -1,6 +1,6 @@
 ---
 title: "Bootstrapping + Regression, pt. 1"
-author: "Philip Waggoner, MACS 30100 <br /> University of Chicago"
+author: "Rui Chen"
 output:
   pdf_document: 
     latex_engine: xelatex
@@ -276,24 +276,22 @@ For this section, you will work in small groups of 4-5. *I will create these gro
 
 Biden feelings data from the ANES. Load with the following code. 
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 library(tidyverse)
 library(broom)
 library(here)
 
 biden <- read_csv(here("data", "biden.csv"))
-#view(biden)
 ```
 
 1. Estimate a **linear** model of the relationship between age (`age`) and attitudes toward Biden (`biden`), and plot the results. Remember to show the 95% confidence interval around your estimated fit line (hint: `geom_smooth()`). For reference, this simple model takes the form, $$\text{Biden}_i = \beta_0 + \beta_1 \text{Age}$$
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 biden_age_lm <- lm(biden ~ poly(age, 1, raw = TRUE), data = biden); tidy(biden_age_lm)
 
 ggplot(biden, aes(age, biden)) +
   geom_point() +
-  geom_smooth(method = "lm") +
-  theme_minimal()
+  geom_smooth(method = "lm") 
 ```
 
 
@@ -314,17 +312,13 @@ ggplot(biden, aes(age, biden)) +
     * Obtain the variance-covariance matrix for your polynomial regression, and then calculate (by hand/don't call values from `broom::tidy()`) and report the standard errors for each parameter from your polynomial regression (*to answer this, make sure you read the question carefully*).
     
 ```{r}
-# biden_4_order_lm
-# vcov(biden_4_order_lm) 
 SEs <-  sqrt(diag(vcov(biden_4_order_lm)))
 SEs
 ```
     
-    
     * Calculate (by hand/don't call values from `broom::tidy()`) and report the t-statistics for each of parameter from your polynomial regression (*to answer this, make sure you read the question carefully*).
     
 ```{r}
-# t_statistics_1 
 t_statistics_calculation <- function(position){
   biden_4_order_lm$coefficients[position] / SEs[position]
 }
@@ -345,14 +339,18 @@ fourth_order_t_statistics <- t_statistics_calculation(5)
 fourth_order_t_statistics
 ```
     
-    
     * Which coefficient estimates are significant at the 95% level, and which are not? *Hint:* you might consider *comparing* your manually-calculated estimates with those obtained via `broom::tidy()` as a quality check to make sure you followed the steps correctly. What does this substantively mean (a single sentence/thought will do)?
     
 ```{r}
-broom::tidy(biden_4_order_lm) # According to the result, my solution given above is correct
+t_result = biden_4_order_lm$coefficients/SEs
+abs(t_result > 1.96) # None of them are significant
+
+# According to the result, my solution given above is correct
+broom::tidy(biden_4_order_lm)
 ```
     
     As we know, if these values are greater than 1.96 (the so-called “t-critical value for 95% confidence”), then the estimate is assumed to be “significant” at the 95% confidence level. All the t values are less than 1.96. Therefore, none of the coefficients are significant at the 95% level.
+
     This substantively means the model is not effective at all. No terms (variables) have any effect on the Y variable. One's age is not a influential factor affecting the attitude toward Biden.
 
 # Appendix: Some extra code for the interested user
