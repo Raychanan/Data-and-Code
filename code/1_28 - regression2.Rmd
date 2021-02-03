@@ -1,7 +1,9 @@
 ---
 title: "Regression, pt. 2"
 author: "Philip Waggoner, MACS 30100 <br /> University of Chicago"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
 ---
 
 # Overview

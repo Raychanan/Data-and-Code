@@ -1,7 +1,9 @@
 ---
 title: "Classification, pt. 1"
 author: "Philip Waggoner, MACS 30100 <br /> University of Chicago"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
 ---
 
 # Overview
