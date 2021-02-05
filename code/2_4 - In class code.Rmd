@@ -1,7 +1,9 @@
 ---
 title: "Classification, pt. 2"
 author: "Philip Waggoner, MACS 30100 <br /> University of Chicago"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
 ---
 
 # Some Changes
@@ -221,9 +223,51 @@ print(classification_report(y_test, lda_preds))
   - Work independently. 
   
   - I am here to answer questions via the chat (*directly*).
+  
+
 
 ## The Task
 
 Replicate the figure from slide 17 in today's lecture notes, but for logistic regression versus kNN. That is: **plot a comparison of the test error over many fits of a kNN classifier (over a range of $k$) to the test error from a logistic regression classifier**. 
 
+```{r}
+library(class)
+
+calc_class_err = function(actual, predicted) {
+  mean(actual != predicted)
+}
+
+set.seed(1234)
+k_to_try = 1:100
+err_k = rep(x = 0, times = length(k_to_try))
+
+for (i in seq_along(k_to_try)) {
+  pred = knn(train = train, 
+             test  = test, 
+             cl    = train$propetit, 
+             k     = k_to_try[i])
+  err_k[i] = calc_class_err(test$propetit, pred)
+}
+
+
+
+# plot error vs choice of k
+plot(err_k^2, type = "b", col = "dodgerblue", cex = 1, pch = 20, 
+     xlab = "k, number of neighbors", ylab = "classification error",
+     main = "(Test) Error Rate vs Neighbors")
+```
+```{r}
+# fit the model using knn() from the class package
+knn_mod <- knn(train, # training set
+               test, # testing set
+               train$propetit, # outcome from the training set
+               k = 1) # local classifier, where k = 1 (feel free to change k to see differences in classification ability, i.e., comparing global vs. local behavior of the kNN classifier)
+
+table(knn_mod, test$propetit) # create simple confusion matrix
+
+mean(knn_mod == test$propetit) # calculate the overall accuracy rate
+```
+
+
 See `Code Challenge.Rmd` for challenge questions. The clock for the challenge runs out at 9:20 am CDT. At that point, just submit your attempt by tomorrow at 5 pm CDT to Canvas as normal.
+

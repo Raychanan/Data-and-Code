@@ -1,0 +1,160 @@
+---
+title: "Classification Coding Challenge"
+author: "Philip Waggoner, MACS 30100 <br /> University of Chicago"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval = FALSE, echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Code Challenge
+
+**To submit your solution, simply email me your final figure: <pdwaggoner@uchicago.edu>**
+  
+## Some basics:
+
+  - *The first person to submit wins the 5% bonus on the current problem set* 
+  
+  - *Everyone* must submit their *attempt* at the challenge, whether completed or not, to today's normal code submission link on Canvas to receive credit. Normal grading guidelines apply.
+  
+  - All preprocessing is done; just load the data and begin.
+  
+  - I have answered questions 3 and 4 for you. But be careful to ensure my code integrates with your code. Keep names and objects well-organized.
+  
+  - Deliverable is a *single plot*, per the task description below.
+
+  - You may use either R or Python, and you may use any approach within these languages to answer the questions.
+  
+  - Work independently. 
+  
+  - I am here to answer questions via the chat (*directly*).
+
+## The Task
+
+Replicate the figure from slide 17 in today's lecture notes, but for logistic regression versus kNN classification. That is: **plot a comparison of the test error over many fits of a kNN classifier (over a range of $k$) to the test error from a logistic regression classifier**. 
+
+*Reminder*: The clock for the challenge runs out at 9:20 am CDT. At that point, just submit your attempt by tomorrow at 5 pm CDT to Canvas as normal.
+
+## The Questions
+
+1. Load the titanic data (`titanic.csv`), which has been cleaned and preprocessed for you including only relevant features for this challenge. 
+
+```{r}
+library(tidyverse)
+library(here) # for loading data; this is *optional*
+library(tidymodels) # for accuracy, splitting, etc.
+library(foreign) # for the (stata) data
+library(class) # for knn()
+library(MASS) # for lda() and qda()
+
+titanic <- read_csv(here("data", "titanic.csv")) %>% 
+  mutate(Survived = factor(Survived)) 
+```
+
+
+2. Create a train/test split, at 70/30 respectively.
+```{r}
+set.seed(1234)
+titanic_split <- initial_split(data = titanic, 
+                               prop = 0.7)
+titanic_train <- training(titanic_split)
+titanic_test <- testing(titanic_split)
+```
+
+3. Fit *100* versions of a kNN classifier to the training data, with each fit corresponding to a different value of $k \in \{1, \dots, 100\}$. 
+
+```{r}
+set.seed(1234)
+mse_knn <- tibble(k = 1:100,
+                  knn_train = map(k, ~ class::knn(dplyr::select(titanic_train, -Survived),
+                                                  test = dplyr::select(titanic_train, -Survived),
+                                                  cl = titanic_train$Survived, k = .)),
+                  knn_test = map(k, ~ class::knn(dplyr::select(titanic_train, -Survived),
+                                                 test = dplyr::select(titanic_test, -Survived),
+                                                 cl = titanic_train$Survived, k = .)),
+                  err_train = map_dbl(knn_train, ~ mean(titanic_test$Survived != .)),
+                  err_test = map_dbl(knn_test, ~ mean(titanic_test$Survived != .)))
+mse_knn
+```
+
+4. Record the testing error for *each fit* of the kNN classifier using the testing (30%) set.
+
+```{r}
+# done in the previous chunk responding to question 3
+library(dplyr)
+knn_test_error <- dplyr::select(mse_knn, "k", "err_test")
+knn_test_error
+```
+
+5. Fit a logistic regression to the training data, predicting the probability of survival (`Survived`) as a function of all other features in the data.
+
+```{r}
+set.seed(1234)
+# model fitting via tidymodels
+# define mod and engine
+mod <- logistic_reg() %>% 
+  set_engine("glm") %>% 
+  set_mode("classification")
+
+# fit 
+logit <- mod %>% 
+  fit(Survived ~ ., 
+      data = titanic_train)
+
+# eval
+logit %>% 
+  predict(titanic_train) %>% 
+  bind_cols(titanic_train) %>% 
+  metrics(truth = Survived,
+          estimate = .pred_class)
+```
+
+
+6. Record the testing error for the logistic regression using the testing (30%) set.
+
+```{r}
+set.seed(1234)
+# model fitting via tidymodels
+# define mod and engine
+mod <- logistic_reg() %>% 
+  set_engine("glm") %>% 
+  set_mode("classification")
+
+# fit 
+logit <- mod %>% 
+  fit(Survived ~ ., 
+      data = titanic_test)
+
+# eval
+logit %>% 
+  predict(titanic_test) %>% 
+  bind_cols(titanic_test) %>% 
+  metrics(truth = Survived,
+          estimate = .pred_class)
+
+logistic_test_error <- logit %>% 
+  predict(titanic_test) %>% 
+  bind_cols(titanic_test) %>% 
+  metrics(truth = Survived,
+          estimate = .pred_class)
+
+logistic_test_error <- logistic_test_error$.estimate[1]
+logistic_test_error <- 1 - logistic_test_error 
+logistic_test_error
+```
+
+
+7. Plot the test error rate from all fits of the kNN classifier as line plot (with values of $k$ ranging along the X axis, and the range of testing error on the Y axis). Place a horizontal reference line on the plot showing the test error from the logistic regression. *Note*: The final plot created in this question is the only thing to be submitted/emailed to me. 
+
+```{r}
+ggplot(mse_knn, aes(k, err_test)) +
+  geom_point() +
+  geom_line() + 
+  geom_line(aes(y = logistic_test_error), linetype="dotted")+
+  labs(
+    title = "KNN and logistic regression test error rate",
+    y = "Test error rate",
+    x = "Number of K"
+  )
+```
