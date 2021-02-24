@@ -259,7 +259,7 @@ library(mixtools)
 library(plotGMM)
 library(amerika)
 
-pres <- read_csv("../data/2012_DVS.csv") %>% 
+pres <- read_csv("/Users/raychanan/Github/Data-and-Code/code/2012_DVS.csv") %>% 
   mutate(State = X1,
          DVS = dem_vs) %>% 
   select(-c(X1, dem_vs))
@@ -400,48 +400,78 @@ ggplot(posterior, aes(x = V1)) +
 
 # Load data and update the pres vote data for 2012
 library(tidyverse)
+library(tidymodels)
+library(patchwork)
+library(here)
+library(tictoc)
+library(ggdendro)
+library(cluster)
+library(factoextra)
+library(skimr)
+library(dbscan)
 
-x <- read_csv("../data/2012_DVS.csv") %>% 
-  mutate(x = X1,
-         y = dem_vs) %>% 
+pres <- read_csv("/Users/raychanan/Github/Data-and-Code/code/2012_DVS.csv") %>% 
+  mutate(State = X1,
+         DVS = dem_vs) %>% 
   select(-c(X1, dem_vs))
 
 
 # 1. Fit a k-means algorithm to the presidential vote shares data we used today, initialized at k=2. 
 
-kmean.out <- rerun(6, kmeans(x %>%
-                               select(-x), 
-                             2, 
-                             nstart = 1))
+set.seed(1)
 
-withinss <- rep(map_chr(kmean.out, ~ .$tot.withinss), each = nrow(x))
+dvs.nodc <- pres$DVS 
+kmeans.nodc <- kmeans(dvs.nodc, 2, nstart = 1) # This is the fitted result
 
-kmean.out %>%
-  map_df(~ enframe(.$cluster, name = NULL), .id = "id") %>%
-  bind_cols(bind_rows(x, x, x, x, x, x)) %>%
-  mutate(withinss = str_c("Within SS = ", withinss),
-         id = str_c("Attempt #", id),
-         value = factor(value)) %>%
-  ggplot(aes(x, y, color = value)) +
-  facet_wrap(~ id + withinss, ncol = 3, 
-             labeller = label_wrap_gen(multi_line = TRUE)) +
-  geom_point() +
-  scale_color_brewer(type = "qual", palette = "Dark2", guide = FALSE) +
-  labs(title = "Convergence of k-means cluster algorithm",
-       x = expression(X[1]),
-       y = expression(X[2])) +
-  theme(legend.position = "none")
 
 # 2. Plot the cluster assignments for all states, varying color for each cluster. Consider using a histogram as we did for the GMM case.
 
 
+state_cluster <- data.frame(kmeans.nodc$cluster) # kmeans.nodc$cluster indicates each state's clustering result
+cluster_and_votes <- cbind(pres, state_cluster) # Append clustering result of each state to the original dataset: pres
+
+ggplot(cluster_and_votes, aes(x = DVS)) + 
+  geom_histogram(aes(fill = factor(kmeans.nodc.cluster)), alpha = 0.4, stat ="bin", binwidth = 3) +
+  labs(x = "Democratic Vote Share",
+       y = "Count of States",
+       title = "Kmeans Model") +
+  scale_fill_manual(values=c(amerika_palettes$Republican[3], amerika_palettes$Democrat[3]),
+                    name="Component",
+                    breaks=c("1", "2"),
+                    labels=c("1", "2")) 
+
 # 3. Put a vertical cut point/line at 50. Given that in a normal election, it requires 50+1 shares of the votes to win, the idea here is if the k-means solution is good, then all states clustered together should lie on their respective sides of the line.
 
+# For this problem, we only need to add three new lines
+
+ggplot(cluster_and_votes, aes(x = DVS)) + 
+  geom_histogram(aes(fill = factor(kmeans.nodc.cluster)), alpha = 0.4, stat ="bin", binwidth = 3) +
+  labs(x = "Democratic Vote Share",
+       y = "Count of States",
+       title = "Gaussian Mixture Model") +
+  scale_fill_manual(values=c(amerika_palettes$Republican[3], amerika_palettes$Democrat[3]),
+                    name="Component",
+                    breaks=c("1", "2"),
+                    labels=c("1", "2")) +
+  geom_vline(xintercept = 50, linetype="solid",  # This is the new line
+             color = "black", size=1.2) + # # This is the new line
+  theme_minimal() # # This is the new line
 
 # 4. Is any state on the "wrong" side of the line? If so, which one?
 
+# Set states with a number greater than 50.0 be the 1 group (Democratic)
+cluster_and_votes$correct_group <- ifelse(cluster_and_votes$DVS > 51.0, 1, 2)
+
+# Filter out states on the "wrong" side
 
 
+error_state <- subset(cluster_and_votes, cluster_and_votes$correct_group != cluster_and_votes$kmeans.nodc.cluster)
+print(error_state) 
+
+# Given that in a normal election, 
+# it requires 50+1 shares of the votes to win, 
+# it's hard to say FL and OH are on the "wrong" side.
+# However, we should be confidant with the result that NC is on the wrong side.
 
 ##
 ##
