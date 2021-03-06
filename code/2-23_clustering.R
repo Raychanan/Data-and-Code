@@ -259,7 +259,7 @@ library(mixtools)
 library(plotGMM)
 library(amerika)
 
-pres <- read_csv("../data/2012_DVS.csv") %>% 
+pres <- read_csv("/Users/raychanan/Github/Data-and-Code/data/2012_DVS.csv") %>% 
   mutate(State = X1,
          DVS = dem_vs) %>% 
   select(-c(X1, dem_vs))

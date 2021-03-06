@@ -15,7 +15,7 @@ library(ggrepel)
 library(dplyr)
 
 # Read in cleaned and preprocessed 2019 ANES Pilot Data (35 FTs + democrat party feature)
-anes <- read_rds(here("Data", "anes.rds"))
+anes <- read_rds(here("/Users/raychanan/Github/ps4-Raychanan/data/anes.rds"))
 
 # correlations
 ## fttrump vs. all others
@@ -477,7 +477,8 @@ library(dplyr)
 
 
 # Read in cleaned and preprocessed 2019 ANES Pilot Data (35 FTs + democrat party feature)
-anes <- read_rds(here("Data", "anes.rds"))
+# anes <- read_rds(here("Data", "anes.rds"))
+anes <- read_rds(here("/Users/raychanan/Github/Data-and-Code/data/anes.rds"))
 
 # t-SNE
 
